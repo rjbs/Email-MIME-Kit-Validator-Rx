@@ -1,6 +1,7 @@
 package Email::MIME::Kit::Validator::Rx;
 use Moose;
 with 'Email::MIME::Kit::Role::Validator';
+# ABSTRACT: validate assembly stash with Rx (from JSON in kit)
 
 use Data::Rx;
 use Data::Rx::TypeBundle::Perl 0.002;
