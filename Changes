@@ -1,0 +1,8 @@
+Revision history for Email-MIME-Kit-Validator-Rx
+
+0.002     2009-03-06
+          improve subclassability by moving bundle generation to BUILD
+
+0.001     2009-01-29
+          initial release!
+
