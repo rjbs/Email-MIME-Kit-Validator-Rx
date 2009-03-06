@@ -3,7 +3,7 @@ use Moose;
 with 'Email::MIME::Kit::Role::Validator';
 # ABSTRACT: validate assembly stash with Rx (from JSON in kit)
 
-use Data::Rx;
+use Data::Rx 0.007;
 use Data::Rx::TypeBundle::Perl 0.002;
 use Moose::Util::TypeConstraints;
 
@@ -22,48 +22,93 @@ has type_plugins => (
   auto_deref => 1,
 );
 
-has schema => (
-  is  => 'ro',
-  isa => 'Object',
-  lazy     => 1,
-  init_arg => undef,
-  default  => sub {
-    my ($self) = @_;
-
-    my $rx_json_ref = $self->kit->get_kit_entry('rx.json');
-    my $rx_data = JSON->new->decode($$rx_json_ref);
-    $self->rx->make_schema($rx_data);
-  },
-);
-
 has rx => (
   is  => 'ro',
   isa => class_type('Data::Rx'),
   lazy     => 1,
   init_arg => undef,
-  default  => sub {
-    my ($self) = @_;
+  builder  => 'build_default_rx_object',
+);
 
-    my $rx = Data::Rx->new({
-      prefix       => $self->prefix,
-      type_plugins => [
-        'Data::Rx::TypeBundle::Perl',
-      ],
-    });
+sub build_default_rx_object {
+  my ($self) = @_;
+  my $rx = Data::Rx->new({
+    prefix       => $self->prefix,
+  });
 
-    for my $plugin ($self->type_plugins) {
-      eval "require $plugin; 1" or die;
-      $rx->register_type_plugin($plugin);
-    }
+  for my $plugin ($self->all_default_type_plugins, $self->type_plugins) {
+    eval "require $plugin; 1" or die;
+    $rx->register_type_plugin($plugin);
+  }
 
-    return $rx;
-  },
+  my $prefix = $self->prefix;
+  for my $key (keys %$prefix) {
+    $rx->add_prefix($key, $prefix->{ $key });
+  }
+
+  return $rx;
+}
+
+sub all_default_type_plugins {
+  # shamlessly stolen from Moose::Object::BUILDALL -- rjbs, 2009-03-06
+  my ($self) = @_;
+  my @plugins;
+  for my $method (
+    reverse
+    $self->meta->find_all_methods_by_name('accumulate_default_type_plugins')
+  ) {
+    push @plugins, $method->{code}->execute($self);
+  }
+
+  return @plugins;
+}
+
+sub accumulate_default_type_plugins {
+  return ('Data::Rx::TypeBundle::Perl');
+}
+
+has schema => (
+  reader   => 'schema',
+  writer   => '_set_schema',
+  isa      => 'Object', # It'd be nice to have a better TC -- rjbs, 2009-03-06
+  init_arg => undef,
+);
+
+has schema_struct => (
+  reader    => '_schema_struct',
+  predicate => '_has_schema_struct',
+  init_arg  => 'schema',
+);
+
+has schema_path => (
+  reader    => '_schema_path',
+  writer    => '_set_schema_path',
+  predicate => '_has_schema_path',
+  isa       => 'Str',
+  init_arg  => 'path',
 );
 
 sub BUILD {
   my ($self) = @_;
-  # we force schema construction now to get it as early as possible
-  $self->schema;
+
+  confess("supply schema or path but not both")
+    if $self->_has_schema_struct and $self->_has_schema_path;
+
+  my $rx_data;
+
+  if ($self->_has_schema_struct) {
+    $rx_data = $self->_schema_struct;
+  } else {
+    $self->_set_schema_path('rx.json') unless $self->_has_schema_path;
+    
+    # Sure, someday we can add another decoder layer here to allow schemata in
+    # YAML.  Whatever. -- rjbs, 2009-03-06
+    my $rx_json_ref = $self->kit->get_kit_entry($self->_schema_path);
+    $rx_data = JSON->new->decode($$rx_json_ref);
+  }
+
+  my $schema  = $self->rx->make_schema($rx_data);
+  $self->_set_schema($schema)
 }
 
 sub validate {

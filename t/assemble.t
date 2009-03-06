@@ -12,12 +12,8 @@ use Email::MIME::Kit;
   sub name { return $_[0]->{name} }
 }
 
-my $kit = Email::MIME::Kit->new({
-  source => 't/kits/test.mkit',
-});
-
 sub assemble_ok {
-  my ($desc, $want_ok, $stash) = @_;
+  my ($kit, $desc, $want_ok, $stash) = @_;
 
   my $ok  = eval { $kit->assemble($stash); 1 };
   my $err = $@;
@@ -28,22 +24,28 @@ sub assemble_ok {
     or diag "error: $@";
 }
 
-assemble_ok(
-  first => 1 => {
-    friend   => TestFriend->new('Jimbo Johnson'),
-    how_long => '10 years',
-  },
-);
+for my $name ('test', 'test-inline') {
+  my $kit = Email::MIME::Kit->new({
+    source => "t/kits/$name.mkit",
+  });
 
-assemble_ok(
-  'non-object' => 0 => {
-    friend   => 'TestFriend',
-    how_long => '10 years',
-  },
-);
+  assemble_ok(
+    $kit => first => 1 => {
+      friend   => TestFriend->new('Jimbo Johnson'),
+      how_long => '10 years',
+    },
+  );
 
-assemble_ok(
-  "no optional" => 1 => {
-    friend   => TestFriend->new('Ricardo'),
-  },
-);
+  assemble_ok(
+    $kit => 'non-object' => 0 => {
+      friend   => 'TestFriend',
+      how_long => '10 years',
+    },
+  );
+
+  assemble_ok(
+    $kit => "no optional" => 1 => {
+      friend   => TestFriend->new('Ricardo'),
+    },
+  );
+}
