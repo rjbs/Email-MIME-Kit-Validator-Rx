@@ -19,12 +19,13 @@ my $kit = Email::MIME::Kit->new({
 sub assemble_ok {
   my ($desc, $want_ok, $stash) = @_;
 
-  my $ok = eval { $kit->assemble($stash); 1 };
-
+  my $ok  = eval { $kit->assemble($stash); 1 };
+  my $err = $@;
   $ok ||= 0;
 
   my $verb = $want_ok ? 'pass' : 'fail';
-  ok($ok == $want_ok, "$desc should $verb");
+  ok($ok == $want_ok, "$desc should $verb")
+    or diag "error: $@";
 }
 
 assemble_ok(

@@ -5,6 +5,7 @@ with 'Email::MIME::Kit::Role::Validator';
 
 use Data::Rx;
 use Data::Rx::TypeBundle::Perl 0.002;
+use Moose::Util::TypeConstraints;
 
 use JSON;
 
@@ -29,21 +30,33 @@ has schema => (
   default  => sub {
     my ($self) = @_;
 
-    for my $plugin ($self->type_plugins) {
-      eval "require $plugin; 1" or die;
-    }
+    my $rx_json_ref = $self->kit->get_kit_entry('rx.json');
+    my $rx_data = JSON->new->decode($$rx_json_ref);
+    $self->rx->make_schema($rx_data);
+  },
+);
+
+has rx => (
+  is  => 'ro',
+  isa => class_type('Data::Rx'),
+  lazy     => 1,
+  init_arg => undef,
+  default  => sub {
+    my ($self) = @_;
 
     my $rx = Data::Rx->new({
       prefix       => $self->prefix,
       type_plugins => [
         'Data::Rx::TypeBundle::Perl',
-        $self->type_plugins,
       ],
     });
 
-    my $rx_json_ref = $self->kit->get_kit_entry('rx.json');
-    my $rx_data = JSON->new->decode($$rx_json_ref);
-    $rx->make_schema($rx_data);
+    for my $plugin ($self->type_plugins) {
+      eval "require $plugin; 1" or die;
+      $rx->register_type_plugin($plugin);
+    }
+
+    return $rx;
   },
 );
 
@@ -62,4 +75,6 @@ sub validate {
 }
 
 no Moose;
+no Moose::Util::TypeConstraints;
+__PACKAGE__->meta->make_immutable;
 1;
