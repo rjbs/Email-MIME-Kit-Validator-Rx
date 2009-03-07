@@ -24,7 +24,7 @@ sub assemble_ok {
     or diag "error: $@";
 }
 
-for my $name ('test', 'test-inline') {
+for my $name (qw(path struct mux)) {
   my $kit = Email::MIME::Kit->new({
     source => "t/kits/$name.mkit",
   });

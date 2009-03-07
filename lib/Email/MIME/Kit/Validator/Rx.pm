@@ -76,39 +76,61 @@ has schema => (
 
 has schema_struct => (
   reader    => '_schema_struct',
-  predicate => '_has_schema_struct',
   init_arg  => 'schema',
 );
 
 has schema_path => (
   reader    => '_schema_path',
   writer    => '_set_schema_path',
-  predicate => '_has_schema_path',
   isa       => 'Str',
   init_arg  => 'path',
+);
+
+has combine => (
+  is          => 'ro',
+  initializer => sub {
+    my ($self, $value, $set) = @_;
+    confess "invalid combine logic: $value"
+      unless defined $value and $value eq 'all';
+    $set->($value);
+  },
 );
 
 sub BUILD {
   my ($self) = @_;
 
-  confess("supply schema or path but not both")
-    if $self->_has_schema_struct and $self->_has_schema_path;
+  $self->_do_goofy_schema_initialization;
+}
 
-  my $rx_data;
+sub _do_goofy_schema_initialization {
+  my ($self) = @_;
 
-  if ($self->_has_schema_struct) {
-    $rx_data = $self->_schema_struct;
-  } else {
-    $self->_set_schema_path('rx.json') unless $self->_has_schema_path;
-    
+  my @paths = grep { defined } ref $self->_schema_path
+            ? @{ $self->_schema_path }
+            : $self->_schema_path;
+
+  my @structs = grep { defined } (ref $self->_schema_struct eq 'ARRAY')
+              ? @{ $self->_schema_struct }
+              : $self->_schema_struct;
+
+  confess("multiple schemata provided but no combine logic given")
+    if @paths + @structs > 1 and ! $self->combine;
+
+  @paths = ('rx.json') unless @paths or @structs;
+
+  for my $path (@paths) {
     # Sure, someday we can add another decoder layer here to allow schemata in
     # YAML.  Whatever. -- rjbs, 2009-03-06
-    my $rx_json_ref = $self->kit->get_kit_entry($self->_schema_path);
-    $rx_data = JSON->new->decode($$rx_json_ref);
+    my $rx_json_ref = $self->kit->get_kit_entry($path);
+    my $rx_data = JSON->new->decode($$rx_json_ref);
+    push @structs, $rx_data;
   }
 
-  my $schema  = $self->rx->make_schema($rx_data);
-  $self->_set_schema($schema)
+  my $schema = @structs > 1
+             ? $self->rx->make_schema({ type => '//all', of => \@structs })
+             : $self->rx->make_schema($structs[0]);
+
+  $self->_set_schema($schema);
 }
 
 sub validate {
