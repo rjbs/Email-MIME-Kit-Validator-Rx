@@ -1,5 +1,8 @@
 Revision history for Email-MIME-Kit-Validator-Rx
 
+0.003     2009-03-06
+          allow multiple schema to be passed; they can be //all-ed together
+
 0.002     2009-03-06
           allow schema to be given inline in manifest
           allow a different name for file containing schema definition
