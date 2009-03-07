@@ -9,6 +9,73 @@ use Moose::Util::TypeConstraints;
 
 use JSON;
 
+=head1 SYNOPSIS
+
+Email::MIME::Kit::Validator::Rx is a Validator plugin for Email::MIME::Kit that
+allows an Rx schema to be used to validate kit assembly data.
+
+A simple mkit's manifest might include the following:
+
+  {
+    "renderer" : "TT",
+    "validator": "Rx",
+    "header"   : [ ... mail headers ... ],
+    "type"     : "text/plain",
+    "path"     : "path/to/template.txt"
+  }
+
+In this simple configuration, the use of "Rx" as the validator will load the
+plugin in its simplest configuration.  It will look for a file called
+F<rx.json> in the kit and will load its contents (as JSON) and use them as a
+schema to validate the data passed to the it's C<assemble> method.
+
+More complex configurations are simple.
+
+This configuration supplies an alternate filename for the JSON file:
+
+  "validator": [ "Rx", { "path": "rx-schema.json" } ],
+
+This configuration supplies the schema definition inline:
+
+  "validator": [
+    "Rx",
+    {
+      "schema": {
+        "type"   : "//rec",
+        "required": {
+          "subject": "//str",
+          "rcpt"   : { "type": "/perl/obj", "isa": "Email::Address" }
+        }
+      }
+    }
+  ]
+
+Notice, above, the C</perl/> prefix.  By default,
+L<Data::Rx::TypeBundle::Perl|Data::Rx::TypeBundle::Perl> is loaded along with
+the core types.
+
+If a C<combine> argument is given, multiple schema definitions may be provided.
+They will be combined with the logic named by the combine argument.  In this
+release, only "all" is valid, and will require all schemata to match.  Here is
+an example:
+
+  "validator": [
+    "Rx",
+    {
+      "combine": "all",
+      "path"   : "rx.json",
+      "schema" : [
+        { "type": "//rec", "rest": "//any", "required": { "foo": "//int" } },
+        { "type": "//rec", "rest": "//any", "required": { "bar": "//int" } },
+      ]
+    }
+  ]
+
+This definition will create an C<//all> schema with three entries: the schema
+found in F<rx.json> and the two schemata given in the array value of C<schema>.
+
+=cut
+
 has prefix => (
   is  => 'ro',
   isa => 'HashRef',
