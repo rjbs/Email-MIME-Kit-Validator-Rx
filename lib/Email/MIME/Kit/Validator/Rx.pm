@@ -86,7 +86,6 @@ has type_plugins => (
   is  => 'ro',
   isa => 'ArrayRef[Str]',
   default    => sub { [] },
-  auto_deref => 1,
 );
 
 has rx => (
@@ -103,7 +102,7 @@ sub build_default_rx_object {
     prefix       => $self->prefix,
   });
 
-  for my $plugin ($self->all_default_type_plugins, $self->type_plugins) {
+  for my $plugin ($self->all_default_type_plugins, @{ $self->type_plugins }) {
     eval "require $plugin; 1" or die;
     $rx->register_type_plugin($plugin);
   }
