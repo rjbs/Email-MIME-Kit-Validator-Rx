@@ -1,6 +1,8 @@
 Revision history for Email-MIME-Kit-Validator-Rx
 
 {{$NEXT}}
+
+0.102010  2010-07-20 15:28:18 America/Los_Angeles
           eliminate use of auto_deref
 
 0.003     2009-03-06
