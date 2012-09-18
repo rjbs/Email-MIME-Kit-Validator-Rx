@@ -4,10 +4,10 @@ with 'Email::MIME::Kit::Role::Validator';
 # ABSTRACT: validate assembly stash with Rx (from JSON in kit)
 
 use Data::Rx 0.007;
-use Data::Rx::TypeBundle::Perl 0.002;
-use Moose::Util::TypeConstraints;
-
+use Data::Rx::TypeBundle::Perl 0.005;
 use JSON;
+use Moose::Util::TypeConstraints;
+use Try::Tiny;
 
 =head1 SYNOPSIS
 
@@ -201,8 +201,12 @@ sub _do_goofy_schema_initialization {
 
 sub validate {
   my ($self, $stash) = @_;
-  Carp::confess("assembly parameters don't pass validation")
-    unless $self->schema->check($stash);
+
+  try {
+    $self->schema->assert_valid($stash);
+  } catch {
+    Carp::confess("assembly parameters don't pass validation: $_");
+  };
 
   return 1;
 }
