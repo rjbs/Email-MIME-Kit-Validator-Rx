@@ -2,6 +2,9 @@ Revision history for Email-MIME-Kit-Validator-Rx
 
 {{$NEXT}}
 
+0.200000  2012-09-18 11:00:07 America/New_York
+          update for use with Data::Rx 0.200000
+
 0.102010  2010-07-20 15:28:18 America/Los_Angeles
           eliminate use of auto_deref
 
